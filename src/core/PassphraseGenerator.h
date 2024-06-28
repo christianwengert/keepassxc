@@ -18,7 +18,7 @@
 #ifndef KEEPASSX_PASSPHRASEGENERATOR_H
 #define KEEPASSX_PASSPHRASEGENERATOR_H
 
-#include <QVector>
+#include <QSet>
 
 class PassphraseGenerator
 {
@@ -51,7 +51,7 @@ private:
     int m_wordCount;
     PassphraseWordCase m_wordCase;
     QString m_separator;
-    QVector<QString> m_wordlist;
+    QSet<QString> m_wordlist;
 };
 
 #endif // KEEPASSX_PASSPHRASEGENERATOR_H

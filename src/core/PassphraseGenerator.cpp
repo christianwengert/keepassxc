@@ -87,7 +87,7 @@ void PassphraseGenerator::setWordList(const QString& path)
         line = line.trimmed();
         line.replace(rx, "\\2");
         if (!line.isEmpty()) {
-            m_wordlist.append(line);
+            m_wordlist.insert(line);
         }
         line = in.readLine();
     }
@@ -115,14 +115,15 @@ QString PassphraseGenerator::generatePassphrase() const
     Q_ASSERT(isValid());
 
     // In case there was an error loading the wordlist
-    if (m_wordlist.length() == 0) {
+    if (m_wordlist.empty()) {
         return {};
     }
 
     QStringList words;
+    QList<QString> wordlist_as_list = m_wordlist.toList();
     for (int i = 0; i < m_wordCount; ++i) {
-        int wordIndex = randomGen()->randomUInt(static_cast<quint32>(m_wordlist.length()));
-        tmpWord = m_wordlist.at(wordIndex);
+        int wordIndex = randomGen()->randomUInt(static_cast<quint32>(m_wordlist.size()));
+        tmpWord = wordlist_as_list.at(wordIndex);
 
         // convert case
         switch (m_wordCase) {
