@@ -184,23 +184,23 @@
 - (bool) enableScreenRecording
 {
 #if __clang_major__ >= 9 && MAC_OS_X_VERSION_MIN_REQUIRED >= 1080
-    if (@available(macOS 10.15, *)) {
-        // Request screen recording permission on macOS 10.15+
-        // This is necessary to get the current window title
-        CGDisplayStreamRef stream = CGDisplayStreamCreate(CGMainDisplayID(), 1, 1, kCVPixelFormatType_32BGRA, nil,
-                                                          ^(CGDisplayStreamFrameStatus status, uint64_t displayTime,
-                                                                  IOSurfaceRef frameSurface, CGDisplayStreamUpdateRef updateRef) {
-                                                              Q_UNUSED(status);
-                                                              Q_UNUSED(displayTime);
-                                                              Q_UNUSED(frameSurface);
-                                                              Q_UNUSED(updateRef);
-                                                          });
-        if (stream) {
-            CFRelease(stream);
-        } else {
-            return NO;
-        }
-    }
+//    if (@available(macOS 10.15, *)) {
+//        // Request screen recording permission on macOS 10.15+
+//        // This is necessary to get the current window title
+//        CGDisplayStreamRef stream = CGDisplayStreamCreate(CGMainDisplayID(), 1, 1, kCVPixelFormatType_32BGRA, nil,
+//                                                          ^(CGDisplayStreamFrameStatus status, uint64_t displayTime,
+//                                                                  IOSurfaceRef frameSurface, CGDisplayStreamUpdateRef updateRef) {
+//                                                              Q_UNUSED(status);
+//                                                              Q_UNUSED(displayTime);
+//                                                              Q_UNUSED(frameSurface);
+//                                                              Q_UNUSED(updateRef);
+//                                                          });
+//        if (stream) {
+//            CFRelease(stream);
+//        } else {
+//            return NO;
+//        }
+//    }
 #endif
     return YES;
 }
