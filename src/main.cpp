@@ -26,6 +26,7 @@
 #include "config-keepassx.h"
 #include "core/Tools.h"
 #include "crypto/Crypto.h"
+#include "crypto/EntropyEventFilter.h"
 #include "gui/Application.h"
 #include "gui/MainWindow.h"
 #include "gui/MessageBox.h"
@@ -72,6 +73,10 @@ int main(int argc, char** argv)
     Application::setApplicationName("KeePassXC");
     Application::setApplicationVersion(KEEPASSXC_VERSION);
     app.setProperty("KPXC_QUALIFIED_APPNAME", "org.keepassxc.KeePassXC");
+
+    // Install an event filter to gather user interaction entropy
+    EntropyEventFilter& entropyFilter = EntropyEventFilter::instance();
+    app.installEventFilter(&entropyFilter);
 
     // HACK: Prevent long-running threads from deadlocking the program with only 1 CPU
     // See https://github.com/keepassxreboot/keepassxc/issues/10391

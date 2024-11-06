@@ -17,11 +17,18 @@
 
 #include "Random.h"
 
+#include "EntropyEventFilter.h"
 #include "core/Global.h"
 
 #include <QSharedPointer>
 
 #include <botan/system_rng.h>
+#include <botan/chacha_rng.h>
+#include <vector>
+#include <cstdint>
+#include <iostream>
+#include <botan/p11.h>
+
 
 QSharedPointer<Random> Random::m_instance;
 
@@ -40,16 +47,28 @@ Random::Random()
 #else
     m_rng.reset(new Botan::Autoseeded_RNG);
 #endif
+    m_rng2.reset(new Botan::ChaCha_RNG);
 }
 
-QSharedPointer<Botan::RandomNumberGenerator> Random::getRng()
-{
-    return m_rng;
-}
 
 void Random::randomize(QByteArray& ba)
 {
-    m_rng->randomize(reinterpret_cast<uint8_t*>(ba.data()), ba.size());
+    // reseed m_rng2
+    QByteArray entropy = EntropyEventFilter::instance().getHashedEntropy();
+    std::vector<uint8_t> entropyData(entropy.begin(), entropy.end());
+    m_rng2->add_entropy(entropyData.data(), entropyData.size());
+    std::cout << "Reseed " << entropy.toHex().toStdString() << std::endl;
+
+    // get randoms from each RNG
+    QByteArray random1(ba);
+    QByteArray random2(ba);
+    m_rng->randomize(reinterpret_cast<uint8_t*>(random1.data()), random1.size());
+    m_rng2->randomize(reinterpret_cast<uint8_t*>(random2.data()), random2.size());
+
+    // mix with XOR
+    for (int i = 0; i < random1.size(); ++i) {
+        ba[i] = static_cast<char>(random1[i] ^ random2[i]);
+    }
 }
 
 QByteArray Random::randomArray(int len)
@@ -71,7 +90,10 @@ quint32 Random::randomUInt(quint32 limit)
 
     // To avoid modulo bias make sure rand is below the largest number where rand%limit==0
     do {
-        m_rng->randomize(reinterpret_cast<uint8_t*>(&rand), 4);
+        // It seems cleaner to call the Random.randomize, so the Botan::RNG.randomize is only called at one single place
+        QByteArray byteArray(sizeof(rand), 0);
+        this->randomize(byteArray);
+        rand = *reinterpret_cast<const quint32*>(byteArray.constData());
     } while (rand > ceil);
 
     return (rand % limit);

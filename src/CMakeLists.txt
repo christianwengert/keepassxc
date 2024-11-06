@@ -64,6 +64,7 @@ set(core_SOURCES
         crypto/Crypto.cpp
         crypto/CryptoHash.cpp
         crypto/Random.cpp
+        crypto/EntropyEventFilter.cpp
         crypto/SymmetricCipher.cpp
         crypto/kdf/Kdf.cpp
         crypto/kdf/AesKdf.cpp
