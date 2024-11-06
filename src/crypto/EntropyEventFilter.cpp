@@ -3,7 +3,7 @@
 #include <QDateTime>
 
 
-EntropyEventFilter::EntropyEventFilter() : hash(QCryptographicHash::Sha256) {}
+EntropyEventFilter::EntropyEventFilter() : hash(Botan::HashFunction::create("SHA-256")), counter(0)  {}
 
 EntropyEventFilter& EntropyEventFilter::instance() {
     static EntropyEventFilter instance;  // Static instance for singleton
@@ -11,12 +11,12 @@ EntropyEventFilter& EntropyEventFilter::instance() {
 }
 
 QByteArray EntropyEventFilter::getHashedEntropy() {
-    // Return the current 32-byte hash and reset for further hashing
-    qint64 timestamp = QDateTime::currentMSecsSinceEpoch();
-    hash.addData(reinterpret_cast<const char*>(&timestamp), sizeof(timestamp));
-    QByteArray digest = hash.result();   // Get the current hash
-//    hash.reset();                        // Reset the hash to start fresh
-    return digest;
+    // add the counter for having different results on every call
+    hash->update(reinterpret_cast<const uint8_t*>(&counter), sizeof(counter));
+    Botan::secure_vector<uint8_t> digest = hash->final();
+    hash->clear();          // after final no more computation possible until clear
+    hash->update(digest);  // feed last hash value into hash
+    return QByteArray(reinterpret_cast<const char*>(digest.data()), static_cast<int>(digest.size()));
 }
 
 
@@ -29,7 +29,7 @@ bool EntropyEventFilter::eventFilter(QObject *obj, QEvent *event) {
 
         // first add a timestamp
         qint64 timestamp = QDateTime::currentMSecsSinceEpoch();
-        hash.addData(reinterpret_cast<const char*>(&timestamp), sizeof(timestamp));
+        hash->update(reinterpret_cast<const uint8_t*>(&timestamp), sizeof(timestamp));
 
         // Secondly we hash some extra data iof available (mouse and keyboard)
         switch (event->type()) {
@@ -39,15 +39,15 @@ bool EntropyEventFilter::eventFilter(QObject *obj, QEvent *event) {
             auto* mouseEvent = dynamic_cast<QMouseEvent*>(event);
             int x = mouseEvent->pos().x();
             int y = mouseEvent->pos().y();
-            hash.addData(reinterpret_cast<const char*>(&x), sizeof(x));
-            hash.addData(reinterpret_cast<const char*>(&y), sizeof(y));
+            hash->update(reinterpret_cast<const uint8_t*>(&x), sizeof(x));
+            hash->update(reinterpret_cast<const uint8_t*>(&y), sizeof(y));
             break;
         }
         case QEvent::KeyPress:
         case QEvent::KeyRelease: {
             auto* keyEvent = dynamic_cast<QKeyEvent*>(event);
             int key = keyEvent->key();
-            hash.addData(reinterpret_cast<const char*>(&key), sizeof(key));
+            hash->update(reinterpret_cast<const uint8_t*>(&key), sizeof(key));
             break;
         }
         default:

@@ -7,13 +7,13 @@
 #include <QObject>
 #include <QRandomGenerator>
 #include <QtCore/QCryptographicHash>
+#include <botan/hash.h>
 
 class EntropyEventFilter : public QObject {
     Q_OBJECT
 public:
     static EntropyEventFilter& instance();  // Singleton access method
 
-//    EntropyEventFilter();
     QByteArray getHashedEntropy(); // Returns the 32-byte hash
 
 protected:
@@ -24,9 +24,9 @@ private:
     EntropyEventFilter(const EntropyEventFilter&) = delete;             // Disable copy constructor
     EntropyEventFilter& operator=(const EntropyEventFilter&) = delete;  // Disable assignment
 
-    void intermediateHash();                // Performs intermediate hashing
+    std::unique_ptr<Botan::HashFunction> hash;
 
-    QCryptographicHash hash;                // Incremental hash object for SHA-256
+    int counter;
 
 
 
