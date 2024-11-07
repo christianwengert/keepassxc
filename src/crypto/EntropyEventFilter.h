@@ -9,6 +9,8 @@
 #include <QtCore/QCryptographicHash>
 #include <botan/hash.h>
 
+#define ENTROPY_HASH_FUNCTION "SHA-256"
+
 class EntropyEventFilter : public QObject {
     Q_OBJECT
 public:
@@ -24,12 +26,9 @@ private:
     EntropyEventFilter(const EntropyEventFilter&) = delete;             // Disable copy constructor
     EntropyEventFilter& operator=(const EntropyEventFilter&) = delete;  // Disable assignment
 
-    std::unique_ptr<Botan::HashFunction> hash;
-
-    int counter;
-
-
-
+//    std::unique_ptr<Botan::HashFunction> hash;
+    QByteArray entropyPool;
+    qint64 callCounter = 0;  // Initialize a counter
 };
 
 #endif // ENTROPY_EVENT_FILTER_H
