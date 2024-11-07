@@ -71,8 +71,7 @@ void Random::randomize(QByteArray& ba)
     shake256->update(reinterpret_cast<const uint8_t*>(random.data()), random.size());
     // Generate the output and write directly to `ba`
     Botan::secure_vector<uint8_t> shakeOutput = shake256->final();
-    ba = QByteArray::fromRawData(reinterpret_cast<const char*>(shakeOutput.data()), ba.size());
-    std::cout << ba.toHex().toStdString() << std::endl;
+    ba = QByteArray(reinterpret_cast<const char*>(shakeOutput.data()), ba.size());
 }
 
 
@@ -95,10 +94,12 @@ quint32 Random::randomUInt(quint32 limit)
 
     // To avoid modulo bias make sure rand is below the largest number where rand%limit==0
     do {
-        // It seems cleaner to call the Random.randomize, so the Botan::RNG.randomize is only called at one single place
         QByteArray byteArray(sizeof(rand), 0);
-        this->randomize(byteArray);
-        rand = *reinterpret_cast<const quint32*>(byteArray.constData());
+        this->randomize(byteArray);  // use the internal randomize function
+        QDataStream stream(byteArray);
+        stream.setByteOrder(QDataStream::LittleEndian);  // Adjust to LittleEndian if needed
+        stream >> rand;
+
     } while (rand > ceil);
 
     return (rand % limit);
