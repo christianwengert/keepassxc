@@ -84,7 +84,7 @@ Random::Random()
             // HMAC the RNG data with the context
             hmac->update(reinterpret_cast<const uint8_t*>(contextData.data()), contextData.size());
             Botan::secure_vector<uint8_t> hmacResult = hmac->final();
-            finalOutput.append(QByteArray::fromRawData(reinterpret_cast<const char*>(hmacResult.data()), hmacResult.size()));
+            finalOutput.append(QByteArray::fromRawData(reinterpret_cast<const char*>(hmacResult.data()), static_cast<int>(hmacResult.size())));
 
             contextCounter++;  // Increment the counter for each iteration
             start += blockSize;
