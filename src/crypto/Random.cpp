@@ -49,13 +49,12 @@ Random::Random()
 
 void Random::randomize(QByteArray& ba)
 {
-    // Generate random data
-    QByteArray random(32, 0);  // 32 Bytes seems reasonable as input
-    m_rng->randomize(reinterpret_cast<uint8_t*>(random.data()), random.size());
+    QByteArray seed(32, 0);  // Generate 32 seed Bytes from system RNG (which should be OK)
+    m_rng->randomize(reinterpret_cast<uint8_t*>(seed.data()), seed.size());
 
     // Combine randomSeed with entropy from EntropyEventFilter for added randomness
-    QByteArray entropy = EntropyEventFilter::instance().getHashedEntropy();
-    random.append(entropy);  // another 32 Bytes
+    QByteArray entropy = EntropyEventFilter::instance().getHashedEntropy();  // another 32 Bytes for the seed, from a different RNG
+    seed.append(entropy);
 
     // Initialize SHAKE256 XOF and absorb the seed data
     int outputBits = ba.size() * 8;
@@ -64,7 +63,7 @@ void Random::randomize(QByteArray& ba)
         throw std::runtime_error("Unable to create SHAKE256 object");
     }
     // Absorb the seed data into SHAKE-256
-    shake256->update(reinterpret_cast<const uint8_t*>(random.data()), random.size());
+    shake256->update(reinterpret_cast<const uint8_t*>(seed.data()), seed.size());
     // Generate the output and write directly to `ba`
     Botan::secure_vector<uint8_t> shakeOutput = shake256->final();
     ba = QByteArray(reinterpret_cast<const char*>(shakeOutput.data()), ba.size());
@@ -91,10 +90,8 @@ quint32 Random::randomUInt(quint32 limit)
     // To avoid modulo bias make sure rand is below the largest number where rand%limit==0
     do {
         QByteArray byteArray(sizeof(rand), 0);
-        this->randomize(byteArray);  // use the internal randomize function
-        QDataStream stream(byteArray);
-        stream.setByteOrder(QDataStream::LittleEndian);  // Adjust to LittleEndian if needed
-        stream >> rand;
+        this->randomize(byteArray);  // use the internal randomize function, so the m_rng is called only in one place
+        rand = *reinterpret_cast<const qint32*>(byteArray.constData());
 
     } while (rand > ceil);
 
