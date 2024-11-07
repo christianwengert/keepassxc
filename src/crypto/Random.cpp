@@ -23,11 +23,8 @@
 #include <QSharedPointer>
 
 #include <botan/system_rng.h>
-#include <botan/chacha_rng.h>
 #include <cstdint>
-
 #include <iostream>
-#include <botan/p11.h>
 
 
 QSharedPointer<Random> Random::m_instance;
@@ -47,51 +44,37 @@ Random::Random()
 #else
     m_rng.reset(new Botan::Autoseeded_RNG);
 #endif
-    m_rng2.reset(new Botan::ChaCha_RNG);
 }
 
+QSharedPointer<Botan::RandomNumberGenerator> Random::getRng()
+{
+    return m_rng;
+}
 
-    void Random::randomize(QByteArray& ba)
-    {
-        // Generate random data
-        QByteArray random(ba);
-        m_rng->randomize(reinterpret_cast<uint8_t*>(random.data()), random.size());
+void Random::randomize(QByteArray& ba)
+{
+    // Generate random data
+    QByteArray random(32, 0);  // 32 Bytes seems reasonable as input
+    m_rng->randomize(reinterpret_cast<uint8_t*>(random.data()), random.size());
 
-        QByteArray finalOutput;
-        int outputSize = ba.size();
-        auto start = random.begin();
-        int contextCounter = 0;  // Initialize a context counter
+    // Combine randomSeed with entropy from EntropyEventFilter for added randomness
+    QByteArray entropy = EntropyEventFilter::instance().getHashedEntropy();
+    random.append(entropy);  // another 32 Bytes
 
-        while (finalOutput.size() < outputSize) {
-
-            std::unique_ptr<Botan::MessageAuthenticationCode> hmac(Botan::MessageAuthenticationCode::create("HMAC(SHA-256)"));
-            auto blockSize = hmac->output_length();
-            if (!hmac) {
-                throw std::runtime_error("Unable to create HMAC object");
-            }
-
-            QByteArray hmacKey = EntropyEventFilter::instance().getHashedEntropy();
-            std::cout << "HMAC Key " << hmacKey.toHex().toStdString() << std::endl;
-            // Set the HMAC key (output of first RNG)
-            hmac->set_key(reinterpret_cast<const uint8_t*>(hmacKey.data()), hmacKey.size());
-
-            // Create a context that includes a counter to ensure uniqueness
-            QByteArray contextData;
-            int dataSize = std::min(static_cast<int>(hmacKey.size()), static_cast<int>(random.end() - start));
-            contextData.append(reinterpret_cast<const char*>(start), dataSize);
-            contextData.append(reinterpret_cast<const char*>(&contextCounter), sizeof(contextCounter));  // Add counter
-
-            // HMAC the RNG data with the context
-            hmac->update(reinterpret_cast<const uint8_t*>(contextData.data()), contextData.size());
-            Botan::secure_vector<uint8_t> hmacResult = hmac->final();
-            finalOutput.append(QByteArray::fromRawData(reinterpret_cast<const char*>(hmacResult.data()), static_cast<int>(hmacResult.size())));
-
-            contextCounter++;  // Increment the counter for each iteration
-            start += blockSize;
-        }
-
-        ba = finalOutput.left(outputSize);  // Truncate to match requested size
+    // Initialize SHAKE256 XOF and absorb the seed data
+    int outputBits = ba.size() * 8;
+    std::unique_ptr<Botan::HashFunction> shake256(Botan::HashFunction::create("SHAKE-256(" + std::to_string(outputBits) + ")"));
+    if (!shake256) {
+        throw std::runtime_error("Unable to create SHAKE256 object");
     }
+    // Absorb the seed data into SHAKE-256
+    shake256->update(reinterpret_cast<const uint8_t*>(random.data()), random.size());
+    // Generate the output and write directly to `ba`
+    Botan::secure_vector<uint8_t> shakeOutput = shake256->final();
+    ba = QByteArray::fromRawData(reinterpret_cast<const char*>(shakeOutput.data()), ba.size());
+    std::cout << ba.toHex().toStdString() << std::endl;
+}
+
 
 QByteArray Random::randomArray(int len)
 {
