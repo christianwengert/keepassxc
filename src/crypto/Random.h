@@ -40,8 +40,6 @@ public:
      */
     quint32 randomUIntRange(quint32 min, quint32 max);
 
-    QSharedPointer<Botan::RandomNumberGenerator> getRng();
-
 private:
     explicit Random();
     Q_DISABLE_COPY(Random);

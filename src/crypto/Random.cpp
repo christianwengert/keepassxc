@@ -46,10 +46,6 @@ Random::Random()
 #endif
 }
 
-QSharedPointer<Botan::RandomNumberGenerator> Random::getRng()
-{
-    return m_rng;
-}
 
 void Random::randomize(QByteArray& ba)
 {
