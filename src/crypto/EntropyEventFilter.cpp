@@ -78,6 +78,10 @@ bool EntropyEventFilter::eventFilter(QObject *obj, QEvent *event) {
             int y = mouseEvent->pos().y();
             h->update(reinterpret_cast<const uint8_t*>(&x), sizeof(x));
             h->update(reinterpret_cast<const uint8_t*>(&y), sizeof(y));
+            int gx = mouseEvent->globalX();
+            int gy = mouseEvent->globalY();
+            h->update(reinterpret_cast<const uint8_t*>(&gx), sizeof(gx));
+            h->update(reinterpret_cast<const uint8_t*>(&gy), sizeof(gy));
             break;
         }
         case QEvent::KeyPress:
