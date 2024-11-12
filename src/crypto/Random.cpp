@@ -56,7 +56,7 @@ void Random::randomize(QByteArray& ba)
     QByteArray entropy = EntropyEventFilter::instance().getHashedEntropy();  // another 32 Bytes for the seed, from a different RNG
     seed.append(entropy);
 
-    // Initialize SHAKE256 XOF and absorb the seed data
+    // Initialize SHAKE256 XOF
     int outputBits = ba.size() * 8;
     std::unique_ptr<Botan::HashFunction> shake256(Botan::HashFunction::create("SHAKE-256(" + std::to_string(outputBits) + ")"));
     if (!shake256) {
