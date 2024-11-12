@@ -2,7 +2,6 @@
 #include <QCoreApplication>
 #include <QDateTime>
 #include <QtCore/QCryptographicHash>
-#include <chrono>
 
 
 EntropyEventFilter::EntropyEventFilter() {
@@ -24,10 +23,10 @@ EntropyEventFilter::EntropyEventFilter() {
     h->update(reinterpret_cast<const uint8_t*>(machineHostName.toUtf8().constData()), machineHostName.size());
 
     // Finalize the hash
-    Botan::secure_vector<uint8_t> digest = h->final();
+    entropyPool = h->final();
 
     // Convert hash to QByteArray
-    entropyPool = QByteArray(reinterpret_cast<const char*>(digest.data()), digest.size());
+//     = QByteArray(reinterpret_cast<const char*>(digest.data()), static_cast<int>(digest.size()));
 }
 
 
@@ -38,7 +37,7 @@ EntropyEventFilter& EntropyEventFilter::instance() {
 
 QByteArray EntropyEventFilter::getHashedEntropy() {
     auto h = Botan::HashFunction::create(ENTROPY_HASH_FUNCTION);
-    h->update(reinterpret_cast<const uint8_t*>(entropyPool.constData()), entropyPool.size());
+    h->update(entropyPool);
 
     // Add unique, call-specific values like timestamp or counter
     qint64 timestamp = QDateTime::currentMSecsSinceEpoch();
@@ -97,13 +96,8 @@ bool EntropyEventFilter::eventFilter(QObject *obj, QEvent *event) {
     }
 
     // Update the entropy pool only when new data is added
-    h->update(reinterpret_cast<const uint8_t*>(entropyPool.constData()), entropyPool.size());
+    h->update(entropyPool);
     Botan::secure_vector<uint8_t> digest = h->final();
-
-    // set new entropy pool with new entropy and hash of last entropy
-    for (int i = 0; i < static_cast<int>(digest.size()); i++) {
-        entropyPool[i] = static_cast<char>(digest[i] ^ entropyPool[i]);
-    }
 
     return QObject::eventFilter(obj, event);
 }
