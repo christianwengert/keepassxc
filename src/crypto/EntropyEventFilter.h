@@ -25,12 +25,8 @@ private:
     EntropyEventFilter();                   // Private constructor
     EntropyEventFilter(const EntropyEventFilter&) = delete;             // Disable copy constructor
     EntropyEventFilter& operator=(const EntropyEventFilter&) = delete;  // Disable assignment
-
-//    std::unique_ptr<Botan::HashFunction> hash;
-//    QByteArray entropyPool;
-    // Clear and release locked memory on destruction
     Botan::secure_vector<uint8_t> entropyPool;
-    qint64 callCounter = 0;  // Initialize a counter
+
 };
 
 #endif // ENTROPY_EVENT_FILTER_H

@@ -17,7 +17,6 @@
 
 #include "Random.h"
 
-#include "EntropyEventFilter.h"
 #include "core/Global.h"
 
 #include <QSharedPointer>
@@ -25,7 +24,13 @@
 #include <botan/system_rng.h>
 #include <cstdint>
 #include <iostream>
+#include <botan/auto_rng.h>
+#include <botan/hash.h>
 
+
+namespace Botan {
+    class HashFunction;
+}
 
 QSharedPointer<Random> Random::m_instance;
 
@@ -40,25 +45,39 @@ QSharedPointer<Random> Random::instance()
 Random::Random()
 {
 #ifdef BOTAN_HAS_SYSTEM_RNG
-    m_rng.reset(new Botan::System_RNG);
+    m_system_rng.reset(new Botan::System_RNG);
 #else
-    m_rng.reset(new Botan::Autoseeded_RNG);
+    m_system_rng.reset(new Botan::Autoseeded_RNG);
 #endif
+    // in any case initialize the secondary rng
+    m_user_rng.reset(new Botan::AutoSeeded_RNG);
+}
+
+
+void Random::reseed_2nd_rng(Botan::secure_vector<uint8_t> ba) const {
+    if (!m_user_rng->accepts_input()) {
+        throw std::runtime_error("Secondary RNG does not accept external entropy");
+    }
+    m_user_rng->add_entropy(ba);
 }
 
 
 void Random::randomize(QByteArray& ba)
 {
-    QByteArray seed(32, 0);  // Generate 32 seed Bytes from system RNG (which should be OK)
-    m_rng->randomize(reinterpret_cast<uint8_t*>(seed.data()), seed.size());
+    QByteArray system_random(ba.size(), 0);
+    m_system_rng->randomize(reinterpret_cast<uint8_t*>(system_random.data()), system_random.size());
 
     // Combine randomSeed with entropy from EntropyEventFilter for added randomness
-    QByteArray entropy = EntropyEventFilter::instance().getHashedEntropy();  // another 32 Bytes for the seed, from a different RNG
-    seed.append(entropy);
+    QByteArray user_random(ba.size(), 0);  // another 32 Bytes for the seed, from a different RNG
+    m_user_rng->randomize(reinterpret_cast<uint8_t*>(user_random.data()), user_random.size());
 
-    // Initialize SHAKE256 XOF
+    QByteArray seed;
+    seed.append(user_random);
+    seed.append(system_random);
+
+    // Initialize SHAKE256 XOF for mixing
     int outputBits = ba.size() * 8;
-    std::unique_ptr<Botan::HashFunction> shake256(Botan::HashFunction::create("SHAKE-256(" + std::to_string(outputBits) + ")"));
+    std::unique_ptr shake256(Botan::HashFunction::create("SHAKE-256(" + std::to_string(outputBits) + ")"));
     if (!shake256) {
         throw std::runtime_error("Unable to create SHAKE256 object");
     }
