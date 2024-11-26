@@ -3,6 +3,8 @@
 #include <QDateTime>
 #include <QtCore/QCryptographicHash>
 
+#include "Random.h"
+
 
 EntropyEventFilter::EntropyEventFilter() {
     auto h = Botan::HashFunction::create(ENTROPY_HASH_FUNCTION);
@@ -24,30 +26,14 @@ EntropyEventFilter::EntropyEventFilter() {
 
     // Finalize the hash
     entropyPool = h->final();
-
-    // Convert hash to QByteArray
-//     = QByteArray(reinterpret_cast<const char*>(digest.data()), static_cast<int>(digest.size()));
+    // reseed the seconadry RNG
+    Random::instance()->reseed_2nd_rng(entropyPool);
 }
 
 
 EntropyEventFilter& EntropyEventFilter::instance() {
     static EntropyEventFilter instance;  // Static instance for singleton
     return instance;
-}
-
-QByteArray EntropyEventFilter::getHashedEntropy() {
-    auto h = Botan::HashFunction::create(ENTROPY_HASH_FUNCTION);
-    h->update(entropyPool);
-
-    // Add unique, call-specific values like timestamp or counter
-    qint64 timestamp = QDateTime::currentMSecsSinceEpoch();
-    h->update(reinterpret_cast<const uint8_t*>(&timestamp), sizeof(timestamp));
-    h->update(reinterpret_cast<const uint8_t*>(&callCounter), sizeof(callCounter));
-    callCounter++;
-
-    Botan::secure_vector<uint8_t> digest = h->final();
-
-    return {reinterpret_cast<const char*>(digest.data()), static_cast<int>(digest.size())};
 }
 
 
@@ -57,7 +43,7 @@ bool EntropyEventFilter::eventFilter(QObject *obj, QEvent *event) {
     // First, add a timestamp and event type for additional entropy
     qint64 timestamp = QDateTime::currentMSecsSinceEpoch();
     h->update(reinterpret_cast<const uint8_t*>(&timestamp), sizeof(timestamp));
-    int eventTypeNumber = static_cast<int>(event->type());
+    int eventTypeNumber = event->type();
     h->update(reinterpret_cast<const uint8_t*>(&eventTypeNumber), sizeof(eventTypeNumber));
 
     // Process event data (e.g., mouse, keyboard) and add to hash
@@ -94,10 +80,12 @@ bool EntropyEventFilter::eventFilter(QObject *obj, QEvent *event) {
             break;
         }
     }
-
-    // Update the entropy pool only when new data is added
-    h->update(entropyPool);
-    Botan::secure_vector<uint8_t> digest = h->final();
+    // add last entropy pool
+    h->update(entropyPool.data(), entropyPool.size());
+    // finalize
+    entropyPool = h->final();
+    // reseed the secondary RNG
+    Random::instance()->reseed_2nd_rng(entropyPool);
 
     return QObject::eventFilter(obj, event);
 }
