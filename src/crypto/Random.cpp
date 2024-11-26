@@ -22,15 +22,9 @@
 #include <QSharedPointer>
 
 #include <botan/system_rng.h>
-#include <cstdint>
-#include <iostream>
 #include <botan/auto_rng.h>
 #include <botan/hash.h>
 
-
-namespace Botan {
-    class HashFunction;
-}
 
 QSharedPointer<Random> Random::m_instance;
 
@@ -54,7 +48,7 @@ Random::Random()
 }
 
 
-void Random::reseed_2nd_rng(Botan::secure_vector<uint8_t> ba) const {
+void Random::reseed_user_rng(Botan::secure_vector<uint8_t> ba) const {
     if (!m_user_rng->accepts_input()) {
         throw std::runtime_error("Secondary RNG does not accept external entropy");
     }

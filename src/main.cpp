@@ -52,14 +52,6 @@ Q_IMPORT_PLUGIN(QXcbIntegrationPlugin)
 
 int main(int argc, char** argv)
 {
-
-
-
-#ifdef WITH_XC_YUBIKEY
-//    using namespace std;
-//    auto a = 5 + 5;
-//    std::cout << a << std::endl;
-#endif
     QT_REQUIRE_VERSION(argc, argv, QT_VERSION_STR)
 
     QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);

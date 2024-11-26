@@ -40,7 +40,7 @@ public:
      */
     quint32 randomUIntRange(quint32 min, quint32 max);
 
-    void reseed_2nd_rng(Botan::secure_vector<uint8_t> ba) const;
+    void reseed_user_rng(Botan::secure_vector<uint8_t> ba) const;
 
 private:
     explicit Random();

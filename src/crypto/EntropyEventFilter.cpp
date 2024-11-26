@@ -27,7 +27,7 @@ EntropyEventFilter::EntropyEventFilter() {
     // Finalize the hash
     entropyPool = h->final();
     // reseed the seconadry RNG
-    Random::instance()->reseed_2nd_rng(entropyPool);
+    Random::instance()->reseed_user_rng(entropyPool);
 }
 
 
@@ -85,7 +85,7 @@ bool EntropyEventFilter::eventFilter(QObject *obj, QEvent *event) {
     // finalize
     entropyPool = h->final();
     // reseed the secondary RNG
-    Random::instance()->reseed_2nd_rng(entropyPool);
+    Random::instance()->reseed_user_rng(entropyPool);
 
     return QObject::eventFilter(obj, event);
 }
