@@ -17,8 +17,6 @@
 
 #include "Random.h"
 
-#include <iostream>
-
 #include "core/Global.h"
 
 #include <QSharedPointer>
@@ -82,7 +80,6 @@ void Random::randomize(QByteArray& ba) const {
     // Generate the output and write directly to `ba`
     Botan::secure_vector<uint8_t> shakeOutput = shake256->final();
     ba = QByteArray(reinterpret_cast<const char*>(shakeOutput.data()), ba.size());
-    // std::cout << ba.toHex().toStdString() << std::endl;
 }
 
 
