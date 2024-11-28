@@ -17,12 +17,15 @@
 
 #include "Random.h"
 
+#include <iostream>
+
 #include "core/Global.h"
 
 #include <QSharedPointer>
 
 #include <botan/system_rng.h>
-#include <botan/auto_rng.h>
+#include <botan/hmac_drbg.h>
+#include <botan/p11_randomgenerator.h>
 #include <botan/hash.h>
 
 
@@ -44,7 +47,7 @@ Random::Random()
     m_system_rng.reset(new Botan::Autoseeded_RNG);
 #endif
     // in any case initialize the secondary rng
-    m_user_rng.reset(new Botan::AutoSeeded_RNG);
+    m_user_rng.reset(new Botan::HMAC_DRBG("SHA-3(256)")); // we will reseed this ourselves
 }
 
 
@@ -56,8 +59,7 @@ void Random::reseed_user_rng(Botan::secure_vector<uint8_t> ba) const {
 }
 
 
-void Random::randomize(QByteArray& ba)
-{
+void Random::randomize(QByteArray& ba) const {
     QByteArray system_random(ba.size(), 0);
     m_system_rng->randomize(reinterpret_cast<uint8_t*>(system_random.data()), system_random.size());
 
@@ -80,18 +82,17 @@ void Random::randomize(QByteArray& ba)
     // Generate the output and write directly to `ba`
     Botan::secure_vector<uint8_t> shakeOutput = shake256->final();
     ba = QByteArray(reinterpret_cast<const char*>(shakeOutput.data()), ba.size());
+    // std::cout << ba.toHex().toStdString() << std::endl;
 }
 
 
-QByteArray Random::randomArray(int len)
-{
+QByteArray Random::randomArray(int len) const {
     QByteArray ba(len, '\0');
     randomize(ba);
     return ba;
 }
 
-quint32 Random::randomUInt(quint32 limit)
-{
+quint32 Random::randomUInt(quint32 limit) const {
     Q_ASSERT(limit <= QUINT32_MAX);
     if (limit == 0) {
         return 0;
@@ -111,7 +112,6 @@ quint32 Random::randomUInt(quint32 limit)
     return (rand % limit);
 }
 
-quint32 Random::randomUIntRange(quint32 min, quint32 max)
-{
+quint32 Random::randomUIntRange(quint32 min, quint32 max) const {
     return min + randomUInt(max - min);
 }

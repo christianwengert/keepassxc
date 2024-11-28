@@ -27,18 +27,18 @@ class Random
 public:
     static QSharedPointer<Random> instance();
 
-    void randomize(QByteArray& ba);
-    QByteArray randomArray(int len);
+    void randomize(QByteArray& ba) const;
+    QByteArray randomArray(int len) const;
 
     /**
      * Generate a random quint32 in the range [0, @p limit)
      */
-    quint32 randomUInt(quint32 limit);
+    quint32 randomUInt(quint32 limit) const;
 
     /**
      * Generate a random quint32 in the range [@p min, @p max)
      */
-    quint32 randomUIntRange(quint32 min, quint32 max);
+    quint32 randomUIntRange(quint32 min, quint32 max) const;
 
     void reseed_user_rng(Botan::secure_vector<uint8_t> ba) const;
 
