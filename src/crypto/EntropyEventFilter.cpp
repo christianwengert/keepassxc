@@ -1,4 +1,6 @@
 #include "EntropyEventFilter.h"
+
+#include <iostream>
 #include <QCoreApplication>
 #include <QDateTime>
 #include "Random.h"
@@ -36,16 +38,22 @@ EntropyEventFilter& EntropyEventFilter::instance() {
 
 
 bool EntropyEventFilter::eventFilter(QObject *obj, QEvent *event) {
-
+    static int entropyCounter = 0;
     // Collect raw event data as entropy
     const qint64 currentTime = QDateTime::currentMSecsSinceEpoch();
     const auto* currentTimeData = reinterpret_cast<const unsigned char*>(&currentTime);
 
     entropyPool.insert(entropyPool.end(), currentTimeData, currentTimeData + sizeof(currentTime));
+    entropyCounter += 10;
 
     const int eventTypeNumber = event->type();
     auto eventTypeData = reinterpret_cast<const unsigned char*>(&eventTypeNumber);
     entropyPool.insert(entropyPool.end(), eventTypeData, eventTypeData + sizeof(currentTime));
+    entropyCounter += 6;
+
+    static QPoint lastMousePos;
+    static qint64 lastMouseTime = 0;
+    static qint64 lastKeyTime = 0;
 
     if (event->type() == QEvent::MouseMove ||
         event->type() == QEvent::MouseButtonPress ||
@@ -64,6 +72,25 @@ bool EntropyEventFilter::eventFilter(QObject *obj, QEvent *event) {
                 const auto* yData = reinterpret_cast<const unsigned char*>(&y);
                 entropyPool.insert(entropyPool.end(), xData, xData + sizeof(x));
                 entropyPool.insert(entropyPool.end(), yData, yData + sizeof(y));
+                entropyCounter += 20;
+                if (lastMouseTime > 0) {
+                    const auto timeDelta = static_cast<float>(currentTime - lastMouseTime);
+                    const int dx = x - lastMousePos.x();
+                    const int dy = y - lastMousePos.y();
+                    const float distance = std::sqrtf(static_cast<float>(dx * dx + dy * dy));
+                    const float speed = distance / (timeDelta);
+                    const float acceleration = speed / timeDelta;
+
+                    const auto* speedData = reinterpret_cast<const unsigned char*>(&speed);
+                    const auto* accelData = reinterpret_cast<const unsigned char*>(&acceleration);
+                    entropyPool.insert(entropyPool.end(), speedData, speedData + sizeof(speed));
+                    entropyPool.insert(entropyPool.end(), accelData, accelData + sizeof(acceleration));
+                    entropyCounter += 10;
+                    entropyCounter += 10;
+                }
+
+                lastMousePos = mouseEvent->pos();
+                lastMouseTime = currentTime;
                 break;
             }
             case QEvent::KeyPress:
@@ -72,6 +99,15 @@ bool EntropyEventFilter::eventFilter(QObject *obj, QEvent *event) {
                 const int key = keyEvent->key();
                 const auto* keyData = reinterpret_cast<const unsigned char*>(&key);
                 entropyPool.insert(entropyPool.end(), keyData, keyData + sizeof(key));
+                entropyCounter += 4;
+                if (lastKeyTime > 0) {
+                    const qint64 timeDelta = currentTime - lastKeyTime;
+                    const auto* timeDeltaData = reinterpret_cast<const unsigned char*>(&timeDelta);
+                    entropyPool.insert(entropyPool.end(), timeDeltaData, timeDeltaData + sizeof(timeDelta));
+                    entropyCounter += 10;
+                }
+
+                lastKeyTime = currentTime;
                 break;
             }
             default:
@@ -94,9 +130,11 @@ bool EntropyEventFilter::eventFilter(QObject *obj, QEvent *event) {
             // Replace the pool with the condensed entropy
             entropyPool.clear();
             entropyPool.insert(entropyPool.end(), condensedEntropy.begin(), condensedEntropy.end());
+            entropyCounter = entropyCounter > 512 ? 256 : entropyCounter / 2;
         }
     }
 
+    std::cout << entropyCounter << "      " <<  currentTime - lastReseedTime << "    " << eventTypeNumber << std::endl;
     // Reseed the PRNG only when necessary
     if (entropyPool.size() >= POOL_CAP / 2 && (currentTime - lastReseedTime) >= MIN_RESEED_INTERVAL_MS) {
         // we want more output this time
@@ -116,6 +154,8 @@ bool EntropyEventFilter::eventFilter(QObject *obj, QEvent *event) {
         // Replace the entropy pool with the second part
         entropyPool.clear();
         entropyPool.insert(entropyPool.end(), retainedEntropy.begin(), retainedEntropy.end());
+
+        entropyCounter = entropyCounter > 512 ? 256 : entropyCounter / 2;
 
         lastReseedTime = currentTime;
     }
