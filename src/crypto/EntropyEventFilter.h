@@ -45,7 +45,7 @@ private:
 
     void getStartupEntropy(Botan::secure_vector<unsigned char> &systemInfo);
 
-    EntropyEventFilter();                   // Private constructor
+    EntropyEventFilter();  // Private constructor
     EntropyEventFilter(const EntropyEventFilter&) = delete;             // Disable copy constructor
     EntropyEventFilter& operator=(const EntropyEventFilter&) = delete;  // Disable assignment
     Botan::secure_vector<unsigned char> entropyPool;
