@@ -21,6 +21,7 @@
 #include <QSharedPointer>
 
 #include <botan/rng.h>
+#include <botan/hmac_drbg.h>
 
 class Random
 {
@@ -40,7 +41,9 @@ public:
      */
     quint32 randomUIntRange(quint32 min, quint32 max) const;
 
-    void reseed_user_rng(Botan::secure_vector<uint8_t> ba) const;
+    void reseedUserRng(Botan::secure_vector<unsigned char> &ba) const;
+
+    void initializeUserRng(Botan::secure_vector<unsigned char> &ba) const;
 
 private:
     explicit Random();
@@ -48,7 +51,7 @@ private:
 
     static QSharedPointer<Random> m_instance;
     QSharedPointer<Botan::RandomNumberGenerator> m_system_rng;
-    QSharedPointer<Botan::RandomNumberGenerator> m_user_rng;
+    QSharedPointer<Botan::HMAC_DRBG> m_user_rng;
 };
 
 static inline QSharedPointer<Random> randomGen()

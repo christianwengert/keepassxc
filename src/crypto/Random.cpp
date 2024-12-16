@@ -16,15 +16,13 @@
  */
 
 #include "Random.h"
-
 #include "core/Global.h"
-
 #include <QSharedPointer>
-
 #include <botan/system_rng.h>
 #include <botan/hmac_drbg.h>
-#include <botan/p11_randomgenerator.h>
 #include <botan/hash.h>
+
+
 
 
 QSharedPointer<Random> Random::m_instance;
@@ -49,36 +47,55 @@ Random::Random()
 }
 
 
-void Random::reseed_user_rng(Botan::secure_vector<uint8_t> ba) const {
+void Random::reseedUserRng(Botan::secure_vector<unsigned char> &ba) const {
     if (!m_user_rng->accepts_input()) {
         throw std::runtime_error("Secondary RNG does not accept external entropy");
     }
-    m_user_rng->add_entropy(ba);
+    if (!m_user_rng->is_seeded()) {
+        throw std::runtime_error("Secondary RNG is not seeded");
+    }
+    m_user_rng->add_entropy(ba);  // ba will be hmac'd and thus hashed in the RNGs update function
+}
+
+void Random::initializeUserRng(Botan::secure_vector<uint8_t> &ba) const {
+
+    if (!m_user_rng->is_seeded()) {
+        // Add system random to the provided system entropy data
+        Botan::secure_vector<unsigned char> systemRandom(32, '\0'); // Create a 32 Byte QByteArray
+        m_system_rng->randomize(systemRandom.data(), systemRandom.size());
+
+        // Combine user-provided entropy with system randomness
+        Botan::secure_vector<unsigned char> combinedEntropy(ba.begin(), ba.end()); // Start with user-provided entropy
+        combinedEntropy.insert(combinedEntropy.end(), systemRandom.begin(), systemRandom.end()); // Append system randomness
+
+        // Seed the RNG with the combined entropy
+        m_user_rng->initialize_with(combinedEntropy);
+    }
 }
 
 
 void Random::randomize(QByteArray& ba) const {
-    QByteArray system_random(ba.size(), 0);
-    m_system_rng->randomize(reinterpret_cast<uint8_t*>(system_random.data()), system_random.size());
+    QByteArray systemRandom(ba.size(), 0);
+    m_system_rng->randomize(reinterpret_cast<uint8_t*>(systemRandom.data()), systemRandom.size());
 
     // Combine randomSeed with entropy from EntropyEventFilter for added randomness
-    QByteArray user_random(ba.size(), 0);  // another 32 Bytes for the seed, from a different RNG
-    m_user_rng->randomize(reinterpret_cast<uint8_t*>(user_random.data()), user_random.size());
+    QByteArray userRandom(ba.size(), 0);  // another 32 Bytes for the seed, from a different RNG
+    m_user_rng->randomize(reinterpret_cast<uint8_t*>(userRandom.data()), userRandom.size());
 
     QByteArray seed;
-    seed.append(user_random);
-    seed.append(system_random);
+    seed.append(userRandom);
+    seed.append(systemRandom);
 
     // Initialize SHAKE256 XOF for mixing
-    int outputBits = ba.size() * 8;
-    std::unique_ptr shake256(Botan::HashFunction::create("SHAKE-256(" + std::to_string(outputBits) + ")"));
+    const int outputBits = ba.size() * 8;
+    const std::unique_ptr shake256(Botan::HashFunction::create("SHAKE-256(" + std::to_string(outputBits) + ")"));
     if (!shake256) {
         throw std::runtime_error("Unable to create SHAKE256 object");
     }
     // Absorb the seed data into SHAKE-256
     shake256->update(reinterpret_cast<const uint8_t*>(seed.data()), seed.size());
     // Generate the output and write directly to `ba`
-    Botan::secure_vector<uint8_t> shakeOutput = shake256->final();
+    const Botan::secure_vector<uint8_t> shakeOutput = shake256->final();
     ba = QByteArray(reinterpret_cast<const char*>(shakeOutput.data()), ba.size());
 }
 
@@ -106,7 +123,7 @@ quint32 Random::randomUInt(quint32 limit) const {
 
     } while (rand > ceil);
 
-    return (rand % limit);
+    return rand % limit;
 }
 
 quint32 Random::randomUIntRange(quint32 min, quint32 max) const {

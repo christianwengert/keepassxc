@@ -11,11 +11,22 @@ class EntropyEventFilter : public QObject {
     Q_OBJECT
 public:
     static EntropyEventFilter& instance();  // Singleton access method
+    void extractEntropyFromEvent(QEvent *event, qint64 currentTime);
+
+    void compressEntropyPool();
+
+    void reseedRngIfNecessary(qint64 currentTime);
+
+    void reseedIfNecessary(qint64 currentTime);
 
 protected:
     bool eventFilter(QObject *obj, QEvent *event) override;
 
 private:
+    void getSystemInfo(QString &info);
+
+    void getStartupEntropy(Botan::secure_vector<uint8_t> &systemInfo);
+
     EntropyEventFilter();                   // Private constructor
     EntropyEventFilter(const EntropyEventFilter&) = delete;             // Disable copy constructor
     EntropyEventFilter& operator=(const EntropyEventFilter&) = delete;  // Disable assignment
