@@ -218,8 +218,8 @@ bool EntropyEventFilter::eventFilter(QObject *obj, QEvent *event) {
 
         constexpr int securityLevel = 256;
 
-        if (shannonEntropy > securityLevel &&
-            minEntropy > securityLevel &&
+        if (shannonEntropy >= securityLevel &&
+            minEntropy >= securityLevel &&
             currentTime - lastReseedTime >= MIN_RESEED_INTERVAL_MS) {
             // estimate the entropy over the whole pool (in bits)
 
