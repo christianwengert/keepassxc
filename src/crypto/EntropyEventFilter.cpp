@@ -221,10 +221,6 @@ bool EntropyEventFilter::eventFilter(QObject *obj, QEvent *event) {
         if (shannonEntropy >= securityLevel &&
             minEntropy >= securityLevel &&
             currentTime - lastReseedTime >= MIN_RESEED_INTERVAL_MS) {
-            // estimate the entropy over the whole pool (in bits)
-
-            std::cout << "reseed entropy: " << entropyPool.size() << " " << " " << shannonEntropy << " " << minEntropy << std::endl;
-
             // Reseed the RNG with the hash of the pool
             // ensures any biases or patterns in the raw entropy are removed
             // also ensures that if the pool becomes too large for the RNG to process
