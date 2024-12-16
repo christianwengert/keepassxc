@@ -40,7 +40,7 @@ double calculateMinEntropy(const Botan::secure_vector<unsigned char>& data) {
 }
 
 
-void EntropyEventFilter::getStartupEntropy(Botan::secure_vector<uint8_t> &systemInfo) {
+void EntropyEventFilter::getStartupEntropy(Botan::secure_vector<unsigned char> &systemInfo) {
     // Gather some available system info
     QElapsedTimer timer;
     timer.start();
@@ -79,33 +79,33 @@ void EntropyEventFilter::getStartupEntropy(Botan::secure_vector<uint8_t> &system
 
     // Append raw data directly into entropyPool
     systemInfo.insert(systemInfo.end(),
-                      reinterpret_cast<const uint8_t*>(&processID),
-                      reinterpret_cast<const uint8_t*>(&processID) + sizeof(processID));
+                      reinterpret_cast<const unsigned char*>(&processID),
+                      reinterpret_cast<const unsigned char*>(&processID) + sizeof(processID));
     systemInfo.insert(systemInfo.end(),
-                      reinterpret_cast<const uint8_t*>(&timestamp),
-                      reinterpret_cast<const uint8_t*>(&timestamp) + sizeof(timestamp));
+                      reinterpret_cast<const unsigned char*>(&timestamp),
+                      reinterpret_cast<const unsigned char*>(&timestamp) + sizeof(timestamp));
     systemInfo.insert(systemInfo.end(),
-                          reinterpret_cast<const uint8_t*>(&memoryAddress),
-                          reinterpret_cast<const uint8_t*>(&memoryAddress) + sizeof(memoryAddress));
+                          reinterpret_cast<const unsigned char*>(&memoryAddress),
+                          reinterpret_cast<const unsigned char*>(&memoryAddress) + sizeof(memoryAddress));
     systemInfo.insert(systemInfo.end(),
-                      reinterpret_cast<const uint8_t*>(&fileTime),
-                      reinterpret_cast<const uint8_t*>(&fileTime) + sizeof(fileTime));
+                      reinterpret_cast<const unsigned char*>(&fileTime),
+                      reinterpret_cast<const unsigned char*>(&fileTime) + sizeof(fileTime));
     const qint64 operationDuration = timer.nsecsElapsed();
     systemInfo.insert(systemInfo.end(),
-                      reinterpret_cast<const uint8_t*>(&operationDuration),
-                      reinterpret_cast<const uint8_t*>(&operationDuration) + sizeof(operationDuration));
+                      reinterpret_cast<const unsigned char*>(&operationDuration),
+                      reinterpret_cast<const unsigned char*>(&operationDuration) + sizeof(operationDuration));
     // now add the big string
     systemInfo.insert(systemInfo.end(),
-                      reinterpret_cast<const uint8_t*>(infoUtf8.constData()),
-                      reinterpret_cast<const uint8_t*>(infoUtf8.constData()) + infoUtf8.size());
+                      reinterpret_cast<const unsigned char*>(infoUtf8.constData()),
+                      reinterpret_cast<const unsigned char*>(infoUtf8.constData()) + infoUtf8.size());
 
 }
 
 
 EntropyEventFilter::EntropyEventFilter() {
-    Botan::secure_vector<uint8_t> systemInfo;
+    Botan::secure_vector<unsigned char> systemInfo;
     getStartupEntropy(systemInfo);
-
+    // hash (whiten) the systemInfo
     const auto hash = Botan::HashFunction::create("SHA-3(256)");
     if (hash) {
         // Hash the excess entropy to condense it
@@ -113,7 +113,7 @@ EntropyEventFilter::EntropyEventFilter() {
         Botan::secure_vector<unsigned char> condensedEntropy = hash->final();
         Random::instance()->initializeUserRng(condensedEntropy);
     } else {
-        throw std::invalid_argument("EntropyEventFilter::EntropyEventFilter()");
+        throw std::invalid_argument("EntropyEventFilter::EntropyEventFilter(): Could not create hash");
     }
 }
 

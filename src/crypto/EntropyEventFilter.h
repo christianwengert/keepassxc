@@ -25,12 +25,12 @@ protected:
 private:
     void getSystemInfo(QString &info);
 
-    void getStartupEntropy(Botan::secure_vector<uint8_t> &systemInfo);
+    void getStartupEntropy(Botan::secure_vector<unsigned char> &systemInfo);
 
     EntropyEventFilter();                   // Private constructor
     EntropyEventFilter(const EntropyEventFilter&) = delete;             // Disable copy constructor
     EntropyEventFilter& operator=(const EntropyEventFilter&) = delete;  // Disable assignment
-    Botan::secure_vector<uint8_t> entropyPool;
+    Botan::secure_vector<unsigned char> entropyPool;
     qint64 lastReseedTime = 0;
 };
 

@@ -57,7 +57,7 @@ void Random::reseedUserRng(Botan::secure_vector<unsigned char> &ba) const {
     m_user_rng->add_entropy(ba);  // ba will be hmac'd and thus hashed in the RNGs update function
 }
 
-void Random::initializeUserRng(Botan::secure_vector<uint8_t> &ba) const {
+void Random::initializeUserRng(Botan::secure_vector<unsigned char> &ba) const {
 
     if (!m_user_rng->is_seeded()) {
         // Add system random to the provided system entropy data
@@ -76,11 +76,11 @@ void Random::initializeUserRng(Botan::secure_vector<uint8_t> &ba) const {
 
 void Random::randomize(QByteArray& ba) const {
     QByteArray systemRandom(ba.size(), 0);
-    m_system_rng->randomize(reinterpret_cast<uint8_t*>(systemRandom.data()), systemRandom.size());
+    m_system_rng->randomize(reinterpret_cast<unsigned char*>(systemRandom.data()), systemRandom.size());
 
     // Combine randomSeed with entropy from EntropyEventFilter for added randomness
     QByteArray userRandom(ba.size(), 0);  // another 32 Bytes for the seed, from a different RNG
-    m_user_rng->randomize(reinterpret_cast<uint8_t*>(userRandom.data()), userRandom.size());
+    m_user_rng->randomize(reinterpret_cast<unsigned char*>(userRandom.data()), userRandom.size());
 
     QByteArray seed;
     seed.append(userRandom);
@@ -93,9 +93,9 @@ void Random::randomize(QByteArray& ba) const {
         throw std::runtime_error("Unable to create SHAKE256 object");
     }
     // Absorb the seed data into SHAKE-256
-    shake256->update(reinterpret_cast<const uint8_t*>(seed.data()), seed.size());
+    shake256->update(reinterpret_cast<const unsigned char*>(seed.data()), seed.size());
     // Generate the output and write directly to `ba`
-    const Botan::secure_vector<uint8_t> shakeOutput = shake256->final();
+    const Botan::secure_vector<unsigned char> shakeOutput = shake256->final();
     ba = QByteArray(reinterpret_cast<const char*>(shakeOutput.data()), ba.size());
 }
 
