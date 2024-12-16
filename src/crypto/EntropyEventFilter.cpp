@@ -1,6 +1,5 @@
 #include "EntropyEventFilter.h"
 
-#include <iostream>
 #include <QCoreApplication>
 #include <QDateTime>
 #include <QMouseEvent>
