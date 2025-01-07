@@ -113,10 +113,7 @@ Resources::Resources()
     if (m_dataPath.isEmpty()) {
         // Last ditch check if we are running from inside the src or test build directory
         trySetResourceDir(appDirPath + QStringLiteral("/../share"))
-            || trySetResourceDir(appDirPath + QStringLiteral("/../../share"))
-            || trySetResourceDir(appDirPath + QStringLiteral("/../../../share"))
-            || trySetResourceDir(appDirPath + QStringLiteral("/../../../../share"))
-            || trySetResourceDir(appDirPath + QStringLiteral("/../../../../../share"));
+            || trySetResourceDir(appDirPath + QStringLiteral("/../../share"));
     }
 
     if (m_dataPath.isEmpty()) {
