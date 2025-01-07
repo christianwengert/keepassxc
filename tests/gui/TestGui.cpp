@@ -489,35 +489,38 @@ void TestGui::testOpenRemoteDatabase()
     QTest::mouseClick(openRemoteButton, Qt::LeftButton);
     QApplication::processEvents();
 
-    TEST_MODAL_NO_WAIT(
-        ImportWizard * wizard; QTRY_VERIFY(wizard = m_tabWidget->findChild<ImportWizard*>());
+    TEST_MODAL_NO_WAIT(ImportWizard * wizard; QTRY_VERIFY(wizard = m_tabWidget->findChild<ImportWizard*>());
 
-        auto* importTypeList = wizard->currentPage()->findChild<QListWidget*>("importTypeList");
-        QVERIFY(importTypeList);
-        importTypeList->scrollToBottom();
+                       auto* importTypeList = wizard->currentPage()->findChild<QListWidget*>("importTypeList");
+                       QVERIFY(importTypeList);
 
-        QListWidgetItem* remoteOption = importTypeList->item(importTypeList->count() - 1);
-        QRect remoteOptionRect = importTypeList->visualItemRect(remoteOption);
-        QTest::mouseClick(importTypeList->viewport(), Qt::LeftButton, nullptr, remoteOptionRect.center());
+                       for (int i = 0; i < importTypeList->count(); ++i) {
+                           auto item = importTypeList->item(i);
+                           if (item->data(Qt::UserRole) == ImportWizard::IMPORT_REMOTE) {
+                               importTypeList->setCurrentItem(item);
+                               break;
+                           }
+                       }
 
-        auto* downloadCommandEdit = wizard->currentPage()->findChild<QLineEdit*>("downloadCommand");
-        QVERIFY(downloadCommandEdit);
-        QTest::keyClicks(downloadCommandEdit, sourceToSync);
+                       auto* downloadCommandEdit = wizard->currentPage()->findChild<QLineEdit*>("downloadCommand");
+                       QVERIFY(downloadCommandEdit);
+                       QTest::keyClicks(downloadCommandEdit, sourceToSync);
 
-        auto* temporaryDatabaseRadio = wizard->currentPage()->findChild<QRadioButton*>("temporaryDatabaseRadio");
-        QVERIFY(temporaryDatabaseRadio);
-        QTest::mouseClick(temporaryDatabaseRadio, Qt::LeftButton);
+                       auto* temporaryDatabaseRadio =
+                           wizard->currentPage()->findChild<QRadioButton*>("temporaryDatabaseRadio");
+                       QVERIFY(temporaryDatabaseRadio);
+                       QTest::mouseClick(temporaryDatabaseRadio, Qt::LeftButton);
 
-        auto* passwordEdit = wizard->currentPage()->findChild<QLineEdit*>("passwordEdit");
-        QVERIFY(passwordEdit);
-        QTest::keyClicks(passwordEdit, "a");
-        QTest::keyClick(passwordEdit, Qt::Key_Enter);
+                       auto* passwordEdit = wizard->currentPage()->findChild<QLineEdit*>("passwordEdit");
+                       QVERIFY(passwordEdit);
+                       QTest::keyClicks(passwordEdit, "a");
+                       QTest::keyClick(passwordEdit, Qt::Key_Enter);
 
-        QApplication::processEvents();
+                       QApplication::processEvents();
 
-        QVERIFY(wizard->currentPage()->findChildren<QTableWidget*>().count() > 0);
+                       QVERIFY(wizard->currentPage()->findChildren<QTableWidget*>().count() > 0);
 
-        QTest::keyClick(passwordEdit, Qt::Key_Enter););
+                       QTest::keyClick(passwordEdit, Qt::Key_Enter););
 
     // remote database has been opened
     QTRY_COMPARE(m_tabWidget->tabText(m_tabWidget->currentIndex()), QString("SyncDatabase [Temporary]"));
@@ -1027,11 +1030,12 @@ void TestGui::testDicewareEntryEntropy()
         // Verify entropy and strength
         auto* entropyLabel = pwGeneratorWidget->findChild<QLabel*>("entropyLabel");
         auto* strengthLabel = pwGeneratorWidget->findChild<QLabel*>("strengthLabel");
-        auto* wordLengthLabel = pwGeneratorWidget->findChild<QLabel*>("charactersInPassphraseLabel");
+        auto* wordLengthLabel = pwGeneratorWidget->findChild<QLabel*>("passwordLengthLabel");
 
         QTRY_COMPARE_WITH_TIMEOUT(entropyLabel->text(), QString("Entropy: 77.55 bit"), 200);
         QCOMPARE(strengthLabel->text(), QString("Password Quality: Good"));
-        QCOMPARE(wordLengthLabel->text().toInt(), pwGeneratorWidget->getGeneratedPassword().size());
+        QCOMPARE(wordLengthLabel->text(),
+                 QString("Characters: %1").arg(QString::number(pwGeneratorWidget->getGeneratedPassword().length())));
 
         QTest::mouseClick(generatedPassword, Qt::LeftButton);
         QTest::keyClick(generatedPassword, Qt::Key_Escape););
